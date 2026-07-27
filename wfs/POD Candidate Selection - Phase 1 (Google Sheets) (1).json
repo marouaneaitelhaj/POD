@@ -1,0 +1,603 @@
+{
+  "name": "POD Candidate Selection - Phase 1 (Google Sheets)",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "runCustomScript",
+        "scriptCode": "try {\n  await $page.setViewport({\n    width: 1440,\n    height: 1200,\n    deviceScaleFactor: 1,\n  });\n\n  const response = await $page.goto($json.url, {\n    waitUntil: \"networkidle2\",\n    timeout: 60000,\n  });\n\n  // Give Amazon extra time to finish rendering\n  await new Promise((resolve) => setTimeout(resolve, 3000));\n\n  const finalUrl = $page.url();\n  const pageTitle = await $page.title();\n\n  const product = await $page.evaluate(() => {\n    const getText = (...selectors) => {\n      for (const selector of selectors) {\n        const element = document.querySelector(selector);\n        const value = element?.innerText?.trim();\n\n        if (value) {\n          return value;\n        }\n      }\n\n      return \"\";\n    };\n\n    const getAttribute = (selectors, attribute) => {\n      for (const selector of selectors) {\n        const element = document.querySelector(selector);\n        const value = element?.getAttribute(attribute);\n\n        if (value) {\n          return value;\n        }\n      }\n\n      return \"\";\n    };\n\n    const getTexts = (...selectors) => {\n      for (const selector of selectors) {\n        const values = [...document.querySelectorAll(selector)]\n          .map((element) => element.innerText?.trim())\n          .filter(Boolean);\n\n        if (values.length > 0) {\n          return [...new Set(values)];\n        }\n      }\n\n      return [];\n    };\n\n    const cleanBrand = (value) =>\n      value.replace(/^Brand:\\s*/i, \"\").trim();\n\n    const asinFromInput =\n      document.querySelector(\"#ASIN\")?.getAttribute(\"value\") ||\n      document\n        .querySelector('input[name=\"ASIN\"]')\n        ?.getAttribute(\"value\") ||\n      \"\";\n\n    const asinFromUrl =\n      location.pathname.match(\n        /\\/(?:dp|gp\\/product)\\/([A-Z0-9]{10})/i\n      )?.[1] || \"\";\n\n    const rawMainImage =\n      getAttribute(\n        [\"#landingImage\", \"#imgBlkFront\", \"#main-image\"],\n        \"data-old-hires\"\n      ) ||\n      getAttribute(\n        [\"#landingImage\", \"#imgBlkFront\", \"#main-image\"],\n        \"data-a-dynamic-image\"\n      ) ||\n      getAttribute(\n        [\"#landingImage\", \"#imgBlkFront\", \"#main-image\"],\n        \"src\"\n      );\n\n    let mainImage = rawMainImage;\n\n    if (rawMainImage?.startsWith(\"{\")) {\n      try {\n        const imageMap = JSON.parse(rawMainImage);\n        mainImage = Object.keys(imageMap)[0] || \"\";\n      } catch {\n        mainImage = \"\";\n      }\n    }\n\n    const images = [\n      ...new Set(\n        [\n          ...document.querySelectorAll(\n            \"#altImages img, .imageThumbnail img, #imageBlockThumbs img\"\n          ),\n        ]\n          .map(\n            (image) =>\n              image.getAttribute(\"data-old-hires\") ||\n              image.getAttribute(\"data-src\") ||\n              image.getAttribute(\"src\") ||\n              \"\"\n          )\n          .filter(Boolean)\n      ),\n    ];\n\n    let bulletPoints = getTexts(\n      \"#feature-bullets li span.a-list-item\",\n      \"#feature-bullets li\"\n    ).filter((value) => {\n      const normalized = value.toLowerCase();\n\n      return (\n        value.length > 2 &&\n        !normalized.includes(\"report an issue\") &&\n        !normalized.includes(\"see more\")\n      );\n    });\n\n    /*\n     * Amazon Merch pages sometimes don't expose the normal\n     * #feature-bullets section. Try extracting \"About this item\".\n     */\n    if (bulletPoints.length === 0) {\n      const bodyText = document.body?.innerText || \"\";\n\n      const aboutMatch = bodyText.match(\n        /About this item\\s+([\\s\\S]*?)(?:See more|Style|Product details|Report an issue)/i\n      );\n\n      if (aboutMatch?.[1]) {\n        bulletPoints = aboutMatch[1]\n          .split(/\\n+/)\n          .map((value) => value.trim())\n          .filter(\n            (value) =>\n              value.length > 2 &&\n              value.length < 500\n          );\n      }\n    }\n\n    const rawBrand = getText(\n      \"#bylineInfo\",\n      \"a#brand\",\n      \".po-brand .po-break-word\"\n    );\n\n    return {\n      asin: asinFromInput || asinFromUrl,\n\n      title: getText(\n        \"#productTitle\",\n        \"#title\",\n        \"h1.a-size-large\",\n        \"h1\"\n      ),\n\n      brand: cleanBrand(rawBrand),\n\n      price: getText(\n        \"#corePrice_feature_div .a-offscreen\",\n        \".apexPriceToPay .a-offscreen\",\n        \".a-price .a-offscreen\",\n        \"#priceblock_ourprice\",\n        \"#priceblock_dealprice\"\n      ),\n\n      rating: getText(\n        \"#acrPopover .a-icon-alt\",\n        \"#averageCustomerReviews .a-icon-alt\",\n        \"#acrPopover\"\n      ),\n\n      reviewCount: getText(\n        \"#acrCustomerReviewText\",\n        \"#reviewsMedley .totalReviewCount\"\n      ),\n\n      bulletPoints,\n\n      description: getText(\n        \"#productDescription\",\n        \"#aplus_feature_div\",\n        \"#aplus\"\n      ),\n\n      productSummary: getText(\n        \"#product-summary\",\n        \"[data-csa-c-content-id='product-summary']\"\n      ),\n\n      category: getText(\n        \"#wayfinding-breadcrumbs_feature_div\",\n        \"#nav-subnav\"\n      ),\n\n      availability: getText(\n        \"#availability\",\n        \"#outOfStock\",\n        \"#deliveryBlockMessage\"\n      ),\n\n      mainImage,\n      images,\n    };\n  });\n\n  /*\n   * Capture screenshot as a Buffer.\n   * Do not use encoding: \"base64\" here.\n   */\n  const screenshotBuffer = await $page.screenshot({\n    fullPage: true,\n    type: \"png\",\n  });\n\n  const screenshotFileName = `${\n    product.asin || `amazon-product-${$json.id || Date.now()}`\n  }.png`;\n\n  return [\n    {\n      json: {\n        ...$json,\n        success: true,\n        finalUrl,\n        statusCode: response?.status() ?? null,\n        pageTitle,\n        product,\n      },\n\n      binary: {\n        screenshot: {\n          data: screenshotBuffer.toString(\"base64\"),\n          mimeType: \"image/png\",\n          fileName: screenshotFileName,\n          fileExtension: \"png\",\n        },\n      },\n    },\n  ];\n} catch (error) {\n  return [\n    {\n      json: {\n        ...$json,\n        success: false,\n        error: error.message,\n        finalUrl: $page.url(),\n      },\n    },\n  ];\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-puppeteer.puppeteer",
+      "typeVersion": 1,
+      "position": [
+        656,
+        0
+      ],
+      "id": "6724dc64-5e1a-4174-80da-db308b9eefa6",
+      "name": "Puppeteer"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2133474c-af89-4a00-b31e-b55e61923272",
+              "leftValue": "={{ $json.output[0].content[0].text.opportunityScore }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1440,
+        0
+      ],
+      "id": "dd8f73cb-6858-4c99-bf8c-5bd4430a684b",
+      "name": "IF (Opportunity Score)"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "id"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an expert Print-on-Demand product analyzer.\n\nAnalyze the provided Amazon product and screenshot.\n\nReturn ONLY valid JSON.\n\nNever use markdown.\n\nEvaluate:\n\n- Product idea\n- Visible text\n- Copyright risk\n- Trademark awareness risk\n- Platform policy risk\n- Opportunity score (0-100)\n- Decision (KEEP / REVIEW / REMOVE)\n\nNever say something is legally safe."
+            },
+            {
+              "content": "=Analyze this Amazon product.\n\nTitle:\n{{$json.product.title}}\n\nBrand:\n{{$json.product.brand}}\n\nCategory:\n{{$json.product.category}}\n\nDescription:\n{{$json.product.description}}\n\nBullet Points:\n{{ JSON.stringify($json.product.bulletPoints) }}\n\nASIN:\n{{$json.product.asin}}\n\nUse the attached screenshot to inspect the design.\n\nReturn JSON only."
+            },
+            {
+              "type": "image",
+              "imageType": "base64",
+              "binaryPropertyName": "screenshot"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_schema",
+              "schema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"productIdea\": { \"type\": \"string\" },\n    \"visibleText\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    },\n    \"copyrightRisk\": {\n      \"type\": \"string\",\n      \"enum\": [\"LOW\", \"MEDIUM\", \"HIGH\", \"UNSURE\"]\n    },\n    \"trademarkRisk\": {\n      \"type\": \"string\",\n      \"enum\": [\"LOW\", \"MEDIUM\", \"HIGH\", \"UNSURE\"]\n    },\n    \"platformPolicyRisk\": {\n      \"type\": \"string\",\n      \"enum\": [\"LOW\", \"MEDIUM\", \"HIGH\", \"UNSURE\"]\n    },\n    \"opportunityScore\": {\n      \"type\": \"integer\"\n    },\n    \"decision\": {\n      \"type\": \"string\",\n      \"enum\": [\"KEEP\", \"REVIEW\", \"REMOVE\"]\n    },\n    \"reason\": {\n      \"type\": \"string\"\n    },\n    \"saferAlternative\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"productIdea\",\n    \"visibleText\",\n    \"copyrightRisk\",\n    \"trademarkRisk\",\n    \"platformPolicyRisk\",\n    \"opportunityScore\",\n    \"decision\",\n    \"reason\",\n    \"saferAlternative\"\n  ],\n  \"additionalProperties\": false\n}"
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1088,
+        0
+      ],
+      "id": "aba38b0e-eec7-4a43-aa44-f6e83c6cde2a",
+      "name": "AI Product Analyzer",
+      "credentials": {
+        "openAiApi": {
+          "id": "rfpcRJH1jSegZjY2",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "09a0acc9-a41b-49cf-9ae0-1a5267afdee8",
+              "name": "Status",
+              "value": "={{ 'NEW' }}",
+              "type": "string"
+            },
+            {
+              "id": "8fe9447e-cb23-4274-9fca-1b1938f048a2",
+              "name": "Product Idea",
+              "value": "={{ $json.output[0].content[0].text.productIdea }}",
+              "type": "string"
+            },
+            {
+              "id": "c711317a-7215-4437-9682-753f6495ff62",
+              "name": "Score",
+              "value": "={{ $json.output[0].content[0].text.opportunityScore }}",
+              "type": "number"
+            },
+            {
+              "id": "0427834a-da12-4a9a-a45c-478874b44bd7",
+              "name": "Copyright Risk",
+              "value": "={{ $json.output[0].content[0].text.copyrightRisk }}",
+              "type": "string"
+            },
+            {
+              "id": "55d86bb5-b493-4f6c-a1e2-1a874adf26e3",
+              "name": "Trademark Risk",
+              "value": "={{ $json.output[0].content[0].text.trademarkRisk }}",
+              "type": "string"
+            },
+            {
+              "id": "f6802971-6c6b-424b-b0bd-1debabd9c72d",
+              "name": "Platform Risk",
+              "value": "={{ $json.output[0].content[0].text.platformPolicyRisk }}",
+              "type": "string"
+            },
+            {
+              "id": "20bff5a2-3661-4fda-8892-ad5ec3370a0b",
+              "name": "Reason",
+              "value": "={{ $json.output[0].content[0].text.reason }}",
+              "type": "string"
+            },
+            {
+              "id": "6f34df8a-e22b-4f52-8e47-b941a6f5ab7c",
+              "name": "Safer Alternative",
+              "value": "={{ $json.output[0].content[0].text.saferAlternative }}",
+              "type": "string"
+            },
+            {
+              "id": "b83aa6e2-2261-46c8-b069-ac7b9c82c560",
+              "name": "Amazon URL",
+              "value": "={{ $('Puppeteer').item.json.finalUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "c420f54a-e8c1-423b-8d53-04b2ec1d2c57",
+              "name": "ASIN",
+              "value": "={{ $('Puppeteer').item.json.product.asin || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "1dbd3e92-404e-4094-8c0e-cce063dd242c",
+              "name": "Title",
+              "value": "={{ $('Puppeteer').item.json.product.title || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "52de67f2-5e07-4451-abd8-beb3a19283a3",
+              "name": "Category",
+              "value": "={{ $('Puppeteer').item.json.product.category || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "8b27c59e-fffd-4ef7-ab25-64b12ed59800",
+              "name": "Image URL",
+              "value": "={{ $('Puppeteer').item.json.product.mainImage || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "f4d5e02d-d113-4e6c-8480-3ec7d77fc250",
+              "name": "Screenshot",
+              "value": "={{ 'C:\\\\n8n\\\\screenshots\\\\' + $('Puppeteer').item.json.product.asin + '.png' }}",
+              "type": "string"
+            },
+            {
+              "id": "2f9f1d75-2ad7-45e6-a50f-421ef50cb786",
+              "name": "Brand",
+              "value": "={{ $('Puppeteer').item.json.product.brand || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1664,
+        0
+      ],
+      "id": "48b2ae05-6448-4f2b-bd1e-0695fa4dd2e1",
+      "name": "Candidate List"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1ORChJ0alMQueo-BeOMRN9ijUMhhCuvv_6J6KKg2sL9w/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Candidates",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "={{ $json.Status }}",
+            "Product Idea": "={{ $json[\"Product Idea\"] }}",
+            "Score": "={{ $json.Score }}",
+            "Copyright Risk": "={{ $json[\"Copyright Risk\"] }}",
+            "Trademark Risk": "={{ $json[\"Trademark Risk\"] }}",
+            "Platform Risk": "={{ $json[\"Platform Risk\"] }}",
+            "Reason": "={{ $json.Reason }}",
+            "Safer Alternative": "={{ $json[\"Safer Alternative\"] }}",
+            "Amazon URL": "={{ $json[\"Amazon URL\"] }}",
+            "ASIN": "={{ $json.ASIN }}",
+            "Brand": "={{ $json.Brand }}",
+            "Title": "={{ $json.Title }}",
+            "Category": "={{ $json.Category }}",
+            "Image URL": "={{ $json[\"Image URL\"] }}",
+            "Screenshot path": "={{ 'C:\\\\n8n\\\\screenshots\\\\' + $('Puppeteer').item.json.product.asin + '.png' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Product Idea",
+              "displayName": "Product Idea",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Copyright Risk",
+              "displayName": "Copyright Risk",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Trademark Risk",
+              "displayName": "Trademark Risk",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Platform Risk",
+              "displayName": "Platform Risk",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reason",
+              "displayName": "Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Safer Alternative",
+              "displayName": "Safer Alternative",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Amazon URL",
+              "displayName": "Amazon URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ASIN",
+              "displayName": "ASIN",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Brand",
+              "displayName": "Brand",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Image URL",
+              "displayName": "Image URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Screenshot path",
+              "displayName": "Screenshot path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1904,
+        0
+      ],
+      "id": "a39145bc-534f-4d2b-902f-01c920f77716",
+      "name": "Save Candidate to Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ysyXrwDBAe5Gntfq",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ '/data/screenshots/' + $json.product.asin + '.png' }}",
+        "dataPropertyName": "screenshot",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        864,
+        0
+      ],
+      "id": "3d5a96aa-1163-4d9f-a1f4-0e1af73cb696",
+      "name": "Save Screenshot Locally"
+    },
+    {
+      "parameters": {
+        "jsCode": "const links = $json.body?.links;\n\nif (!Array.isArray(links)) {\n  throw new Error('body.links must be an array');\n}\n\nconst cleanedLinks = links\n  .map(link => String(link).trim())\n  .filter(link => link.length > 0);\n\nif (cleanedLinks.length === 0) {\n  throw new Error('No valid links were provided');\n}\n\nreturn cleanedLinks.map((url, index) => ({\n  json: {\n    id: index + 1,\n    url\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        0
+      ],
+      "id": "cb48184e-25f1-4a97-b626-ef4b162df1d6",
+      "name": "Parse Links"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pod/analyze",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        64,
+        0
+      ],
+      "id": "8ca938d2-549c-419e-802a-c698e3315f5a",
+      "name": "Listen for test event",
+      "webhookId": "c8b90c36-17f1-47d4-bf1e-4598e01f4361"
+    },
+    {
+      "parameters": {
+        "jsCode": "const candidates = $input.all().map(item => ({\n  asin: item.json.ASIN,\n  status: item.json.Status,\n  productIdea: item.json[\"Product Idea\"],\n  score: item.json.Score,\n  copyrightRisk: item.json[\"Copyright Risk\"],\n  trademarkRisk: item.json[\"Trademark Risk\"],\n  platformRisk: item.json[\"Platform Risk\"],\n  reason: item.json.Reason,\n  saferAlternative: item.json[\"Safer Alternative\"],\n  title: item.json.Title,\n  brand: item.json.Brand,\n  category: item.json.Category,\n  amazonUrl: item.json[\"Amazon URL\"],\n  imageUrl: item.json[\"Image URL\"],\n  screenshotPath: item.json.Screenshot\n}));\n\nreturn [{\n  json: {\n    success: true,\n    count: candidates.length,\n    candidates\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        0
+      ],
+      "id": "eeeb9098-e312-451c-99ec-e238716cfc9a",
+      "name": "Prepare API Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2320,
+        0
+      ],
+      "id": "58f7b457-65f4-44a4-9883-344c9fb78140",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Puppeteer": {
+      "main": [
+        [
+          {
+            "node": "Save Screenshot Locally",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Product Analyzer": {
+      "main": [
+        [
+          {
+            "node": "IF (Opportunity Score)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF (Opportunity Score)": {
+      "main": [
+        [
+          {
+            "node": "Candidate List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Candidate List": {
+      "main": [
+        [
+          {
+            "node": "Save Candidate to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Screenshot Locally": {
+      "main": [
+        [
+          {
+            "node": "AI Product Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Links": {
+      "main": [
+        [
+          {
+            "node": "Puppeteer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listen for test event": {
+      "main": [
+        [
+          {
+            "node": "Parse Links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Candidate to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Prepare API Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare API Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0602b111-81a6-419f-b960-88f151a23573",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6f63accbf48661ac4d9abd1a8f1d3c45517e4d4f65da58821dd1c028e0646047"
+  },
+  "nodeGroups": [],
+  "id": "5egEDJSPvQLWDuOW",
+  "tags": []
+}

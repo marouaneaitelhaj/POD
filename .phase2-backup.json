@@ -1,0 +1,1077 @@
+﻿{
+    "updatedAt":  "2026-07-25T20:18:56.280Z",
+    "createdAt":  "2026-07-21T17:48:35.135Z",
+    "id":  "2bMyGKDNapBlva1f",
+    "name":  "POD Selected Candidate - Phase 2 (Google Sheets)",
+    "description":  null,
+    "active":  false,
+    "isArchived":  false,
+    "nodes":  [
+                  {
+                      "parameters":  {
+
+                                     },
+                      "type":  "n8n-nodes-base.manualTrigger",
+                      "typeVersion":  1,
+                      "position":  [
+                                       -224,
+                                       528
+                                   ],
+                      "id":  "a3982a32-a573-4479-ad40-065cd9c3fe33",
+                      "name":  "When clicking â€˜Execute workflowâ€™"
+                  },
+                  {
+                      "parameters":  {
+                                         "documentId":  {
+                                                            "__rl":  true,
+                                                            "value":  "https://docs.google.com/spreadsheets/d/1ORChJ0alMQueo-BeOMRN9ijUMhhCuvv_6J6KKg2sL9w/edit?gid=0#gid=0",
+                                                            "mode":  "url"
+                                                        },
+                                         "sheetName":  {
+                                                           "__rl":  true,
+                                                           "value":  "Candidates",
+                                                           "mode":  "name"
+                                                       },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.googleSheets",
+                      "typeVersion":  4.7,
+                      "position":  [
+                                       16,
+                                       528
+                                   ],
+                      "id":  "b634794b-6edb-41e3-831b-5a5dd25919e8",
+                      "name":  "Read Candidates",
+                      "credentials":  {
+                                          "googleSheetsOAuth2Api":  {
+                                                                        "id":  "ysyXrwDBAe5Gntfq",
+                                                                        "name":  "Google Sheets account"
+                                                                    }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const picked = $input.all().filter(item =\u003e {\n  const status = String(item.json.Status ?? \u0027\u0027).trim().toUpperCase();\n  return status === \u0027APPROVED\u0027;\n});\n\nif (picked.length === 0) {\n  throw new Error(\u0027No APPROVED candidate found.\u0027);\n}\n\nif (picked.length \u003e 1) {\n  throw new Error(\u0027More than one APPROVED candidate.\u0027);\n}\n\nreturn picked;"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       256,
+                                       528
+                                   ],
+                      "id":  "973127ef-9bbe-4003-b761-9fb08df9c65a",
+                      "name":  "Keep One Selected Candidate"
+                  },
+                  {
+                      "parameters":  {
+                                         "modelId":  {
+                                                         "__rl":  true,
+                                                         "value":  "gpt-5",
+                                                         "mode":  "id"
+                                                     },
+                                         "responses":  {
+                                                           "values":  [
+                                                                          {
+                                                                              "role":  "system",
+                                                                              "content":  "You are an expert Print-on-Demand creative director. Create a commercially strong but clearly original redesign concept based only on the high-level niche, audience, emotional hook, and theme. Never copy the original composition, wording, illustration, layout, brand, characters, trade dress, or distinctive visual elements. Change the illustration style, composition, typography, colors, perspective, and decorative elements. Return only valid JSON matching the schema."
+                                                                          },
+                                                                          {
+                                                                              "content":  "=Create one original redesign direction for this user-selected candidate.\n\nProduct idea: {{$json.productIdea}}\nOriginal title: {{$json.originalTitle}}\nOpportunity score: {{$json.opportunityScore}}\nVisible text: {{$json.visibleText}}\nReason: {{$json.reason}}\nSafer alternative: {{$json.saferAlternative}}\nAudience clues: infer from the product idea only.\n\nThe final image is intended for a print-on-demand shirt design. It should be centered, readable, print-ready, and isolated on a transparent background. Do not mention or recreate brands or protected characters."
+                                                                          }
+                                                                      ]
+                                                       },
+                                         "builtInTools":  {
+
+                                                          },
+                                         "options":  {
+                                                         "textFormat":  {
+                                                                            "textOptions":  {
+                                                                                                "type":  "json_schema",
+                                                                                                "schema":  "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"newConcept\": {\"type\": \"string\"},\n    \"newSlogan\": {\"type\": \"string\"},\n    \"targetAudience\": {\"type\": \"string\"},\n    \"illustrationStyle\": {\"type\": \"string\"},\n    \"composition\": {\"type\": \"string\"},\n    \"colorPalette\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n    \"typography\": {\"type\": \"string\"},\n    \"imagePrompt\": {\"type\": \"string\"},\n    \"negativePrompt\": {\"type\": \"string\"}\n  },\n  \"required\": [\"newConcept\",\"newSlogan\",\"targetAudience\",\"illustrationStyle\",\"composition\",\"colorPalette\",\"typography\",\"imagePrompt\",\"negativePrompt\"],\n  \"additionalProperties\": false\n}"
+                                                                                            }
+                                                                        }
+                                                     }
+                                     },
+                      "type":  "@n8n/n8n-nodes-langchain.openAi",
+                      "typeVersion":  2.3,
+                      "position":  [
+                                       464,
+                                       528
+                                   ],
+                      "id":  "d46bdcb3-f66d-4fa4-bca9-95ed1e8b5b4b",
+                      "name":  "AI ReDesign Prompt",
+                      "credentials":  {
+                                          "openAiApi":  {
+                                                            "id":  "rfpcRJH1jSegZjY2",
+                                                            "name":  "OpenAI account"
+                                                        }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "assignments":  {
+                                                             "assignments":  [
+                                                                                 {
+                                                                                     "id":  "b11816e7-f59b-44bb-9a3d-51171acbafcc",
+                                                                                     "name":  "candidateId",
+                                                                                     "value":  "={{ $(\u0027Keep One Selected Candidate\u0027).item.json.candidateId }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "b165bb46-2f44-4b3a-b5d6-87d66546eb11",
+                                                                                     "name":  "productIdea",
+                                                                                     "value":  "={{ $(\u0027Keep One Selected Candidate\u0027).item.json.productIdea }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "609bda8e-7044-4325-9283-5c23e471391c",
+                                                                                     "name":  "newConcept",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.newConcept }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "5ce94c93-6730-4161-b3b6-7cfeda4324ba",
+                                                                                     "name":  "newSlogan",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.newSlogan }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "95ee71ef-ad84-4a9f-a354-ae4258418e7f",
+                                                                                     "name":  "targetAudience",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.targetAudience }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "38e675ca-6376-4ad2-8e76-05a5e46afa45",
+                                                                                     "name":  "illustrationStyle",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.illustrationStyle }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "8d42d29c-8325-40c9-b605-c296c7cc48a3",
+                                                                                     "name":  "composition",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.composition }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "a1d96be8-6d08-42cb-8efe-4f9b1ab44a8d",
+                                                                                     "name":  "colorPalette",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.colorPalette }}",
+                                                                                     "type":  "array"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "71dfcd86-8258-47e6-be3f-35220eb45dfe",
+                                                                                     "name":  "typography",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.typography }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "a9820809-c05b-4af5-8585-c4d9595b40c1",
+                                                                                     "name":  "imagePrompt",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.imagePrompt }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "294f82e8-f9ff-4c40-a6dc-eeb9ecffa5d4",
+                                                                                     "name":  "negativePrompt",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.negativePrompt }}",
+                                                                                     "type":  "string"
+                                                                                 }
+                                                                             ]
+                                                         },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.set",
+                      "typeVersion":  3.4,
+                      "position":  [
+                                       784,
+                                       528
+                                   ],
+                      "id":  "d5b52c3b-1151-4470-ab89-e341f9245680",
+                      "name":  "Prepare Design Brief"
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "https://api.openai.com/v1/images/generations",
+                                         "authentication":  "predefinedCredentialType",
+                                         "nodeCredentialType":  "openAiApi",
+                                         "sendBody":  true,
+                                         "contentType":  "raw",
+                                         "rawContentType":  "application/json",
+                                         "body":  "={{ JSON.stringify({ model: \u0027gpt-image-1\u0027, prompt: $json.imagePrompt + \u0027\\n\\nAvoid: \u0027 + $json.negativePrompt, size: \u00271024x1024\u0027, quality: \u0027high\u0027, background: \u0027transparent\u0027 }) }}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       976,
+                                       528
+                                   ],
+                      "id":  "a4fa7ef5-f2c8-464b-b148-a1c82753fc49",
+                      "name":  "AI Image Generator",
+                      "credentials":  {
+                                          "openAiApi":  {
+                                                            "id":  "rfpcRJH1jSegZjY2",
+                                                            "name":  "OpenAI account"
+                                                        }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const response = $json;\nconst b64 = response?.data?.[0]?.b64_json;\nif (!b64) {\n  throw new Error(\u0027OpenAI did not return data[0].b64_json\u0027);\n}\nconst candidateId = $(\u0027Prepare Design Brief\u0027).item.json.candidateId;\nreturn [{\n  json: {\n    ...$(\u0027Prepare Design Brief\u0027).item.json,\n    imageCreated: true\n  },\n  binary: {\n    design: {\n      data: b64,\n      mimeType: \u0027image/png\u0027,\n      fileName: `pod-design-${candidateId}.png`,\n      fileExtension: \u0027png\u0027\n    }\n  }\n}];"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       1216,
+                                       528
+                                   ],
+                      "id":  "daca6fa1-fead-48d7-af3d-1ac88d0e611b",
+                      "name":  "Convert Image to Binary"
+                  },
+                  {
+                      "parameters":  {
+                                         "modelId":  {
+                                                         "__rl":  true,
+                                                         "value":  "gpt-5",
+                                                         "mode":  "id"
+                                                     },
+                                         "responses":  {
+                                                           "values":  [
+                                                                          {
+                                                                              "role":  "system",
+                                                                              "content":  "You are an Amazon Merch listing specialist.\n\nCreate a clear, readable, keyword-aware listing for a print-on-demand apparel design.\n\nRules:\n- Do not use trademarked brands, celebrity names, movie titles, game titles, song lyrics, or copyrighted characters.\n- Do not copy the source product listing.\n- Keep the wording natural and commercially useful.\n- Avoid keyword stuffing.\n- Match the generated design concept and target audience.\n- Respect the character limits exactly.\n- Return only valid JSON matching the required schema.\n\nCharacter limits:\n- designTitle: 3 to 60 characters\n- brand: 3 to 50 characters\n- featureBullet1: maximum 256 characters\n- featureBullet2: maximum 256 characters\n- productDescription: 75 to 2000 characters"
+                                                                          },
+                                                                          {
+                                                                              "content":  "=Create an Amazon Merch listing for this generated design.\n\nOriginal candidate:\nProduct idea: {{ $(\u0027Keep One Selected Candidate\u0027).item.json[\"Product Idea\"] }}\nOriginal title: {{ $(\u0027Keep One Selected Candidate\u0027).item.json.Title }}\nCategory: {{ $(\u0027Keep One Selected Candidate\u0027).item.json.Category }}\nSafer alternative: {{ $(\u0027Keep One Selected Candidate\u0027).item.json[\"Safer Alternative\"] }}\n\nGenerated design brief:\nNew concept: {{ $(\u0027AI ReDesign Prompt\u0027).item.json.output[0].content[0].text.newConcept }}\nNew slogan: {{ $(\u0027AI ReDesign Prompt\u0027).item.json.output[0].content[0].text.newSlogan }}\nTarget audience: {{ $(\u0027AI ReDesign Prompt\u0027).item.json.output[0].content[0].text.targetAudience }}\nIllustration style: {{ $(\u0027AI ReDesign Prompt\u0027).item.json.output[0].content[0].text.illustrationStyle }}\nComposition: {{ $(\u0027AI ReDesign Prompt\u0027).item.json.output[0].content[0].text.composition }}\n\nGenerate:\n1. A concise design title.\n2. A safe, original brand name.\n3. Feature bullet 1 focused on the concept and audience.\n4. Feature bullet 2 focused on gifting occasions and wearer interests.\n5. A natural product description of at least 75 characters.\n\nDo not include:\n- labels such as \"Title:\"\n- markdown\n- explanations\n- extra fields"
+                                                                          }
+                                                                      ]
+                                                       },
+                                         "builtInTools":  {
+
+                                                          },
+                                         "options":  {
+                                                         "textFormat":  {
+                                                                            "textOptions":  {
+                                                                                                "type":  "json_schema",
+                                                                                                "schema":  "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"designTitle\": {\n      \"type\": \"string\",\n      \"minLength\": 3,\n      \"maxLength\": 60\n    },\n    \"brand\": {\n      \"type\": \"string\",\n      \"minLength\": 3,\n      \"maxLength\": 50\n    },\n    \"featureBullet1\": {\n      \"type\": \"string\",\n      \"maxLength\": 256\n    },\n    \"featureBullet2\": {\n      \"type\": \"string\",\n      \"maxLength\": 256\n    },\n    \"productDescription\": {\n      \"type\": \"string\",\n      \"minLength\": 75,\n      \"maxLength\": 2000\n    }\n  },\n  \"required\": [\n    \"designTitle\",\n    \"brand\",\n    \"featureBullet1\",\n    \"featureBullet2\",\n    \"productDescription\"\n  ],\n  \"additionalProperties\": false\n}"
+                                                                                            }
+                                                                        }
+                                                     }
+                                     },
+                      "type":  "@n8n/n8n-nodes-langchain.openAi",
+                      "typeVersion":  2.3,
+                      "position":  [
+                                       1664,
+                                       528
+                                   ],
+                      "id":  "e077fa8a-6f51-4678-ae19-b1228ecf55ac",
+                      "name":  "AI Listing Generator",
+                      "credentials":  {
+                                          "openAiApi":  {
+                                                            "id":  "rfpcRJH1jSegZjY2",
+                                                            "name":  "OpenAI account"
+                                                        }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "assignments":  {
+                                                             "assignments":  [
+                                                                                 {
+                                                                                     "id":  "6fec16fc-2f9a-46bb-98af-4b071d0982a0",
+                                                                                     "name":  "candidateId",
+                                                                                     "value":  "={{ $(\u0027Convert Image to Binary\u0027).item.json.candidateId }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "ccc1728f-6d9c-4df1-8cc3-894fadde02bb",
+                                                                                     "name":  "status",
+                                                                                     "value":  "GENERATED",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "d50b3c6b-69c0-4aaf-91c4-210e7896b63e",
+                                                                                     "name":  "generatedAt",
+                                                                                     "value":  "={{ $now.toISO() }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "30c19ffc-64f9-49c9-8e93-3baa6f8b557d",
+                                                                                     "name":  "newConcept",
+                                                                                     "value":  "={{ $(\u0027Convert Image to Binary\u0027).item.json.newConcept }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "900775f1-5cdf-496c-a0dd-1fb3d6e11c14",
+                                                                                     "name":  "newSlogan",
+                                                                                     "value":  "={{ $(\u0027Convert Image to Binary\u0027).item.json.newSlogan }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "6449a9cd-5ef3-4a78-aa2c-73be04e9daa0",
+                                                                                     "name":  "imagePrompt",
+                                                                                     "value":  "={{ $(\u0027Convert Image to Binary\u0027).item.json.imagePrompt }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "6cc65c8a-2570-4c35-adc6-9eb383725303",
+                                                                                     "name":  "title",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.title }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "c2fb172e-e566-43d8-b6c7-82e86e46c047",
+                                                                                     "name":  "brand",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.brand }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "824c9489-09a6-457c-987c-0916c59d11cf",
+                                                                                     "name":  "bullet1",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.bullet1 }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "bb168015-0b9f-4a36-967c-2add3d6e9509",
+                                                                                     "name":  "bullet2",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.bullet2 }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "e2a1ecff-9304-468a-89c4-49b51824a35b",
+                                                                                     "name":  "description",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.description }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "93af4cb2-923c-4faf-ace6-5a42282411e7",
+                                                                                     "name":  "backendKeywords",
+                                                                                     "value":  "={{ $json.output[0].content[0].text.backendKeywords }}",
+                                                                                     "type":  "array"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "60e811b9-7543-4abd-9f7e-42896ed08d4c",
+                                                                                     "name":  "designPath",
+                                                                                     "value":  "={{ \u0027C:\\\\n8n\\\\generated\\\\\u0027 + $(\u0027Keep One Selected Candidate\u0027).item.json.ASIN + \u0027-generated.png\u0027 }}",
+                                                                                     "type":  "string"
+                                                                                 }
+                                                                             ]
+                                                         },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.set",
+                      "typeVersion":  3.4,
+                      "position":  [
+                                       1936,
+                                       528
+                                   ],
+                      "id":  "9c4cf184-08a7-48d8-81c4-d6f15bb2fcec",
+                      "name":  "Final Result"
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "append",
+                                         "documentId":  {
+                                                            "__rl":  true,
+                                                            "value":  "https://docs.google.com/spreadsheets/d/1ORChJ0alMQueo-BeOMRN9ijUMhhCuvv_6J6KKg2sL9w/edit?gid=0#gid=0",
+                                                            "mode":  "url"
+                                                        },
+                                         "sheetName":  {
+                                                           "__rl":  true,
+                                                           "value":  "Generated",
+                                                           "mode":  "name"
+                                                       },
+                                         "columns":  {
+                                                         "mappingMode":  "autoMapInputData",
+                                                         "value":  {
+
+                                                                   },
+                                                         "matchingColumns":  [
+
+                                                                             ],
+                                                         "schema":  [
+                                                                        {
+                                                                            "id":  "Date",
+                                                                            "displayName":  "Date",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "Product Idea",
+                                                                            "displayName":  "Product Idea",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "New Slogan",
+                                                                            "displayName":  "New Slogan",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "Image Prompt",
+                                                                            "displayName":  "Image Prompt",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "Title",
+                                                                            "displayName":  "Title",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "Brand",
+                                                                            "displayName":  "Brand",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "Bullet 1",
+                                                                            "displayName":  "Bullet 1",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "Bullet 2",
+                                                                            "displayName":  "Bullet 2",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "Description",
+                                                                            "displayName":  "Description",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "Backend Keywords",
+                                                                            "displayName":  "Backend Keywords",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "Image URL",
+                                                                            "displayName":  "Image URL",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "candidateId",
+                                                                            "displayName":  "candidateId",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "status",
+                                                                            "displayName":  "status",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "generatedAt",
+                                                                            "displayName":  "generatedAt",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "newConcept",
+                                                                            "displayName":  "newConcept",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "newSlogan",
+                                                                            "displayName":  "newSlogan",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "imagePrompt",
+                                                                            "displayName":  "imagePrompt",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "title",
+                                                                            "displayName":  "title",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "brand",
+                                                                            "displayName":  "brand",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "bullet1",
+                                                                            "displayName":  "bullet1",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "bullet2",
+                                                                            "displayName":  "bullet2",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "description",
+                                                                            "displayName":  "description",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "backendKeywords",
+                                                                            "displayName":  "backendKeywords",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "design path",
+                                                                            "displayName":  "design path",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "designPath",
+                                                                            "displayName":  "designPath",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        }
+                                                                    ],
+                                                         "attemptToConvertTypes":  false,
+                                                         "convertFieldsToString":  false
+                                                     },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.googleSheets",
+                      "typeVersion":  4.7,
+                      "position":  [
+                                       2144,
+                                       528
+                                   ],
+                      "id":  "94dfb403-20e9-4230-a80d-b4e231c5c40e",
+                      "name":  "Save Listing to Generated Sheet",
+                      "credentials":  {
+                                          "googleSheetsOAuth2Api":  {
+                                                                        "id":  "ysyXrwDBAe5Gntfq",
+                                                                        "name":  "Google Sheets account"
+                                                                    }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "content":  "## Setup before first run\n1. Create a Google spreadsheet with two tabs: **Candidates** and **Generated**.\n2. In Candidates, use these headers: candidateId, selected, status, productIdea, opportunityScore, decision, copyrightRisk, trademarkRisk, platformPolicyRisk, reason, saferAlternative, visibleText, amazonUrl, asin, originalTitle.\n3. In Generated, use these headers: candidateId, status, generatedAt, newConcept, newSlogan, imagePrompt, title, brand, bullet1, bullet2, description, backendKeywords.\n4. Replace `REPLACE_WITH_GOOGLE_SHEET_ID` in both Google Sheets nodes.\n5. Select your Google Sheets credential in both Sheets nodes.\n6. Select your OpenAI credential in the AI nodes and HTTP Request node.\n7. In Candidates set exactly one row\u0027s selected value to TRUE, then execute this workflow.\n8. The generated PNG is available in the Convert Image to Binary node under binary property `design`.",
+                                         "height":  460,
+                                         "width":  560
+                                     },
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "typeVersion":  1,
+                      "position":  [
+                                       608,
+                                       -64
+                                   ],
+                      "id":  "e9e36941-c2ac-4724-9f8f-202f36c75577",
+                      "name":  "Setup Instructions"
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "update",
+                                         "documentId":  {
+                                                            "__rl":  true,
+                                                            "value":  "https://docs.google.com/spreadsheets/d/1ORChJ0alMQueo-BeOMRN9ijUMhhCuvv_6J6KKg2sL9w/edit?gid=0#gid=0",
+                                                            "mode":  "url"
+                                                        },
+                                         "sheetName":  {
+                                                           "__rl":  true,
+                                                           "value":  "gid=0",
+                                                           "mode":  "list",
+                                                           "cachedResultName":  "Candidates",
+                                                           "cachedResultUrl":  "https://docs.google.com/spreadsheets/d/1ORChJ0alMQueo-BeOMRN9ijUMhhCuvv_6J6KKg2sL9w/edit#gid=0"
+                                                       },
+                                         "columns":  {
+                                                         "mappingMode":  "defineBelow",
+                                                         "value":  {
+                                                                       "ASIN":  "={{ $(\u0027Keep One Selected Candidate\u0027).item.json.ASIN }}",
+                                                                       "Status":  "GENERATED"
+                                                                   },
+                                                         "matchingColumns":  [
+                                                                                 "ASIN"
+                                                                             ],
+                                                         "schema":  [
+                                                                        {
+                                                                            "id":  "Status",
+                                                                            "displayName":  "Status",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "Product Idea",
+                                                                            "displayName":  "Product Idea",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "Score",
+                                                                            "displayName":  "Score",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "Copyright Risk",
+                                                                            "displayName":  "Copyright Risk",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "Trademark Risk",
+                                                                            "displayName":  "Trademark Risk",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "Platform Risk",
+                                                                            "displayName":  "Platform Risk",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "Reason",
+                                                                            "displayName":  "Reason",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "Safer Alternative",
+                                                                            "displayName":  "Safer Alternative",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "Amazon URL",
+                                                                            "displayName":  "Amazon URL",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "ASIN",
+                                                                            "displayName":  "ASIN",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "Brand",
+                                                                            "displayName":  "Brand",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "Title",
+                                                                            "displayName":  "Title",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "Category",
+                                                                            "displayName":  "Category",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "Image URL",
+                                                                            "displayName":  "Image URL",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "Screenshot path",
+                                                                            "displayName":  "Screenshot path",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "row_number",
+                                                                            "displayName":  "row_number",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "number",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "readOnly":  true,
+                                                                            "removed":  true
+                                                                        }
+                                                                    ],
+                                                         "attemptToConvertTypes":  false,
+                                                         "convertFieldsToString":  false
+                                                     },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.googleSheets",
+                      "typeVersion":  4.7,
+                      "position":  [
+                                       2352,
+                                       528
+                                   ],
+                      "id":  "8d5c19c7-9789-4589-a868-b18eef8d2ed9",
+                      "name":  "Update row in sheet",
+                      "credentials":  {
+                                          "googleSheetsOAuth2Api":  {
+                                                                        "id":  "ysyXrwDBAe5Gntfq",
+                                                                        "name":  "Google Sheets account"
+                                                                    }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "write",
+                                         "fileName":  "={{ \u0027/data/generated/\u0027 + $(\u0027Keep One Selected Candidate\u0027).item.json.ASIN + \u0027-generated.png\u0027 }}",
+                                         "dataPropertyName":  "design",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.readWriteFile",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       1424,
+                                       528
+                                   ],
+                      "id":  "7b8c7064-0193-4959-8e37-9a069135b348",
+                      "name":  "Read/Write Files from Disk"
+                  }
+              ],
+    "connections":  {
+                        "When clicking â€˜Execute workflowâ€™":  {
+                                                                     "main":  [
+                                                                                  [
+                                                                                      {
+                                                                                          "node":  "Read Candidates",
+                                                                                          "type":  "main",
+                                                                                          "index":  0
+                                                                                      }
+                                                                                  ]
+                                                                              ]
+                                                                 },
+                        "Read Candidates":  {
+                                                "main":  [
+                                                             [
+                                                                 {
+                                                                     "node":  "Keep One Selected Candidate",
+                                                                     "type":  "main",
+                                                                     "index":  0
+                                                                 }
+                                                             ]
+                                                         ]
+                                            },
+                        "Keep One Selected Candidate":  {
+                                                            "main":  [
+                                                                         [
+                                                                             {
+                                                                                 "node":  "AI ReDesign Prompt",
+                                                                                 "type":  "main",
+                                                                                 "index":  0
+                                                                             }
+                                                                         ]
+                                                                     ]
+                                                        },
+                        "AI ReDesign Prompt":  {
+                                                   "main":  [
+                                                                [
+                                                                    {
+                                                                        "node":  "Prepare Design Brief",
+                                                                        "type":  "main",
+                                                                        "index":  0
+                                                                    }
+                                                                ]
+                                                            ]
+                                               },
+                        "Prepare Design Brief":  {
+                                                     "main":  [
+                                                                  [
+                                                                      {
+                                                                          "node":  "AI Image Generator",
+                                                                          "type":  "main",
+                                                                          "index":  0
+                                                                      }
+                                                                  ]
+                                                              ]
+                                                 },
+                        "AI Image Generator":  {
+                                                   "main":  [
+                                                                [
+                                                                    {
+                                                                        "node":  "Convert Image to Binary",
+                                                                        "type":  "main",
+                                                                        "index":  0
+                                                                    }
+                                                                ]
+                                                            ]
+                                               },
+                        "Convert Image to Binary":  {
+                                                        "main":  [
+                                                                     [
+                                                                         {
+                                                                             "node":  "Read/Write Files from Disk",
+                                                                             "type":  "main",
+                                                                             "index":  0
+                                                                         }
+                                                                     ]
+                                                                 ]
+                                                    },
+                        "AI Listing Generator":  {
+                                                     "main":  [
+                                                                  [
+                                                                      {
+                                                                          "node":  "Final Result",
+                                                                          "type":  "main",
+                                                                          "index":  0
+                                                                      }
+                                                                  ]
+                                                              ]
+                                                 },
+                        "Final Result":  {
+                                             "main":  [
+                                                          [
+                                                              {
+                                                                  "node":  "Save Listing to Generated Sheet",
+                                                                  "type":  "main",
+                                                                  "index":  0
+                                                              }
+                                                          ]
+                                                      ]
+                                         },
+                        "Save Listing to Generated Sheet":  {
+                                                                "main":  [
+                                                                             [
+                                                                                 {
+                                                                                     "node":  "Update row in sheet",
+                                                                                     "type":  "main",
+                                                                                     "index":  0
+                                                                                 }
+                                                                             ]
+                                                                         ]
+                                                            },
+                        "Read/Write Files from Disk":  {
+                                                           "main":  [
+                                                                        [
+                                                                            {
+                                                                                "node":  "AI Listing Generator",
+                                                                                "type":  "main",
+                                                                                "index":  0
+                                                                            }
+                                                                        ]
+                                                                    ]
+                                                       }
+                    },
+    "settings":  {
+                     "executionOrder":  "v1",
+                     "binaryMode":  "separate",
+                     "availableInMCP":  false
+                 },
+    "staticData":  null,
+    "meta":  {
+                 "templateCredsSetupCompleted":  true
+             },
+    "nodeGroups":  [
+
+                   ],
+    "pinData":  {
+
+                },
+    "versionId":  "6a9d65ee-375c-4854-b1cb-92d78734d985",
+    "activeVersionId":  null,
+    "versionCounter":  52,
+    "triggerCount":  0,
+    "sourceWorkflowId":  null,
+    "tags":  [
+
+             ],
+    "shared":  [
+                   {
+                       "updatedAt":  "2026-07-21T17:48:35.137Z",
+                       "createdAt":  "2026-07-21T17:48:35.137Z",
+                       "role":  "workflow:owner",
+                       "workflowId":  "2bMyGKDNapBlva1f",
+                       "projectId":  "GmUF2YCn3wOvnBm1",
+                       "project":  {
+                                       "updatedAt":  "2026-07-19T15:19:12.946Z",
+                                       "createdAt":  "2026-07-19T15:15:36.702Z",
+                                       "id":  "GmUF2YCn3wOvnBm1",
+                                       "name":  "saad ff ait elhaj \u003csaad.yb.ff.00@gmail.com\u003e",
+                                       "type":  "personal",
+                                       "icon":  null,
+                                       "description":  null,
+                                       "customTelemetryTags":  [
+
+                                                               ],
+                                       "creatorId":  "39732eb7-4035-4060-b08d-a395213bdf3c"
+                                   }
+                   }
+               ],
+    "versionMetadata":  {
+                            "name":  null,
+                            "description":  null
+                        }
+}
