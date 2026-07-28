@@ -40,7 +40,29 @@ src/
 npm install
 ```
 
-## Running
+## Running everything with one command
+
+`start.ps1` (PowerShell) / `start.sh` (Git Bash) start the n8n Docker container
+(if it isn't already running) and the frontend dev server together:
+
+```powershell
+npm start
+# or directly:
+.\start.ps1
+```
+
+```bash
+./start.sh
+```
+
+The script waits for Docker Desktop to be ready, starts (or reuses) the `n8n`
+container using the same `docker run` command from your setup, waits for
+`http://localhost:5678` to respond, runs `npm install` if `node_modules` is
+missing, then starts `npm run dev`. It's safe to re-run — it won't start a second
+`n8n` container if one is already up, and n8n's workflows persist across
+container restarts via the `n8n_data` Docker volume.
+
+## Running manually
 
 ```powershell
 npm run dev
